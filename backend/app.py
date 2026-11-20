@@ -79,7 +79,8 @@ def create_registration():
         event = event_result.data
         if event is None:
             return jsonify({"error": "Event not found"}), 404
-        if event.get("status") != "open":
+        status = str(event.get("status") or "").strip().lower()
+        if status not in {"open", "published", "active"}:
             return jsonify({"error": "Event is not open for registration"}), 409
 
         duplicate = (

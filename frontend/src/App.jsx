@@ -16,6 +16,20 @@ const ROUTES = [
   ['GET', '/api/me/registrations', 'List a profile’s registrations'],
   ['GET', '/api/events/{id}/registrations', 'View event attendees'],
 ];
+const COVER_IMAGES = [
+  '/design-assets/browse/browse-01.jpg',
+  '/design-assets/browse/browse-02.jpg',
+  '/design-assets/browse/browse-03.jpg',
+  '/design-assets/browse/browse-04.jpg',
+  '/design-assets/browse/browse-05.jpg',
+];
+const TICKET_IMAGES = [
+  '/design-assets/tickets/ticket-01.jpg',
+  '/design-assets/tickets/ticket-02.jpg',
+  '/design-assets/tickets/ticket-03.jpg',
+];
+const OPEN_STATUSES = new Set(['open', 'published', 'active']);
+const isRegistrationOpen = (status) => OPEN_STATUSES.has(String(status || '').trim().toLowerCase());
 
 function Icon({ children, className = '' }) {
   return <span aria-hidden="true" className={`icon ${className}`}>{children}</span>;
@@ -23,7 +37,8 @@ function Icon({ children, className = '' }) {
 
 function StatusPill({ status }) {
   const value = String(status || 'unknown');
-  return <span className={`status-pill ${value.toLowerCase() === 'open' ? 'is-open' : ''}`}><i />{value}</span>;
+  const tone = isRegistrationOpen(value) ? 'is-open' : value.toLowerCase() === 'registered' ? 'is-confirmed' : '';
+  return <span className={`status-pill ${tone}`}><i />{value}</span>;
 }
 
 function App() {
@@ -70,13 +85,13 @@ function App() {
   }, [loadEvents]);
 
   const openEvents = useMemo(
-    () => events.filter((event) => String(event.status || '').toLowerCase() === 'open').length,
+    () => events.filter((event) => isRegistrationOpen(event.status)).length,
     [events],
   );
   const filteredEvents = useMemo(() => events.filter((event) => {
     const matchesSearch = `${event.title || ''} ${event.id || ''} ${event.organizer_id || ''}`
       .toLowerCase().includes(query.trim().toLowerCase());
-    const matchesStatus = statusFilter === 'all' || String(event.status).toLowerCase() === statusFilter;
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'open' ? isRegistrationOpen(event.status) : !isRegistrationOpen(event.status));
     return matchesSearch && matchesStatus;
   }), [events, query, statusFilter]);
 
@@ -171,7 +186,7 @@ function App() {
           <span className="brand-copy"><strong>campus<span>pulse</span></strong><small>EVENT NETWORK <b>·</b> 01</small></span>
         </a>
         <div className="workspace-label">YOUR CAMPUS <span>⌄</span></div>
-        <div className="campus-card"><span className="campus-logo">N</span><span><b>Northstar University</b><small>Community network</small></span><span className="more">···</span></div>
+        <div className="campus-card"><span className="campus-logo">C</span><span><b>CampusPulse Community</b><small>Campus event network</small></span><span className="more">···</span></div>
         <div className="nav-caption">WORKSPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
           {NAV.map(([key, label, glyph]) => (
@@ -219,9 +234,9 @@ function BrowsePage({ events, allEvents, loading, error, query, setQuery, status
   return <>
     <PageHeading eyebrow="THE CAMPUS, IN MOTION" title="Find your" accent="next thing." description="A little curiosity goes a long way. Find your people, learn something new, or just show up." actions={<><button className="button secondary" onClick={onRefresh}>↻ <span>Refresh feed</span></button><span className="live-label"><i /> LIVE FEED</span></>} />
     <section className="hero-strip"><div className="hero-copy"><div className="hero-kicker"><span className="spark">✳</span> THIS IS YOUR CAMPUS</div><h2>Make the most of<br />your <em>in-between.</em></h2><p>Ideas, people, and plans worth leaving your room for.</p><button className="hero-link" onClick={() => document.getElementById('event-grid')?.scrollIntoView({ behavior: 'smooth' })}>Explore what’s happening <span>↘</span></button></div><div className="hero-art" aria-hidden="true"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="hero-core">CP<span>✳</span></div><span className="orbit-tag tag-one">IDEAS IN MOTION</span><span className="orbit-tag tag-two">YOU BELONG HERE</span><span className="hero-sticker">SHOW<br />UP <b>↗</b></span></div><div className="hero-index">01 <span>/</span> 04</div></section>
-    <section className="metric-row"><Metric label="EVENTS ON THE RADAR" value={loading ? '—' : String(allEvents.length).padStart(2, '0')} note="Across your campus" glyph="◈" /><Metric label="OPEN REGISTRATION" value={loading ? '—' : String(openEvents).padStart(2, '0')} note="Ready when you are" glyph="↗" tone="orange" /><Metric label="SEATS IN PLAY" value={loading ? '—' : totalSeats.toLocaleString()} note="Capacity across events" glyph="⊞" tone="cyan" /><div className="metric-connection"><span className="connection-pulse" /><span>DATA STREAM<br /><b>CONNECTED</b></span></div></section>
+    <section className="metric-row"><Metric label="EVENTS ON THE RADAR" value={loading ? '—' : String(allEvents.length).padStart(2, '0')} note="Across your campus" glyph="◈" /><Metric label="OPEN REGISTRATION" value={loading ? '—' : String(openEvents).padStart(2, '0')} note="Ready when you are" glyph="↗" tone="orange" /><Metric label="SEATS IN PLAY" value={loading ? '—' : totalSeats.toLocaleString()} note="Capacity across events" glyph="⊞" tone="cyan" /><div className="metric-connection"><span className={`connection-pulse ${error ? 'offline' : ''}`} /><span>EVENT DATA<br /><b>{loading ? 'SYNCING' : error ? 'API ERROR' : 'AVAILABLE'}</b></span></div></section>
     <div className="section-heading" id="event-grid"><div><div className="eyebrow">YOUR NEXT CHAPTER</div><h2>Events worth showing up for <span className="title-period">.</span></h2></div><span className="mono section-count">{String(events.length).padStart(2, '0')} RESULTS</span></div>
-    <div className="filter-bar"><label className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search events, organizers, or IDs…" /><kbd>⌘ K</kbd></label><div className="filter-tabs">{['all', 'open', 'closed'].map((filter) => <button key={filter} className={statusFilter === filter ? 'selected' : ''} onClick={() => setStatusFilter(filter)}>{filter === 'all' ? 'All events' : filter[0].toUpperCase() + filter.slice(1)}</button>)}</div><button className="filter-icon" title="Refresh" onClick={onRefresh}>⟳</button></div>
+    <div className="filter-bar"><label className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search events, organizers, or IDs…" /></label><div className="filter-tabs">{[['all', 'All events'], ['open', 'Open for registration'], ['closed', 'Other status']].map(([filter, label]) => <button key={filter} className={statusFilter === filter ? 'selected' : ''} onClick={() => setStatusFilter(filter)}>{label}</button>)}</div><button className="filter-icon" title="Refresh" onClick={onRefresh}>⟳</button></div>
     {loading ? <LoadingState label="Pulling the event stream" /> : error ? <ErrorState message={error} onRetry={onRefresh} /> : events.length === 0 ? <div className="empty-state"><span>✳</span><b>No events have landed yet</b><small>Try refreshing in a moment. Events from your backend will show up here.</small></div> : filteredEvents.length === 0 ? <div className="empty-state"><span>⌕</span><b>No matches found</b><small>Try another search or status filter.</small></div> : <div className="event-grid">{events.map((event, index) => <EventCard key={event.id} event={event} index={index} onSelect={() => onSelect(event)} onRoster={() => onRoster(event)} />)}</div>}
     <div className="api-note"><span className="api-note-icon">⌁</span><span><b>Direct from your backend</b><small>Event cards are loaded live from the public CampusPulse API.</small></span><code>GET /api/events</code></div>
   </>;
@@ -229,8 +244,8 @@ function BrowsePage({ events, allEvents, loading, error, query, setQuery, status
 
 function EventCard({ event, index, onSelect, onRoster }) {
   const initials = (event.title || 'CP').split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
-  const open = String(event.status || '').toLowerCase() === 'open';
-  return <article className={`event-card card-${index % 4}`}><div className="event-cover"><span className="cover-no">CP / {String(index + 1).padStart(2, '0')}</span><span className="cover-glyph">{['✳', '◈', '⌁', '✣'][index % 4]}</span><span className="cover-orbit" /><span className="cover-cap">{event.capacity ? `${event.capacity} SEATS` : 'CAMPUS EVENT'}</span></div><div className="event-info"><div className="event-meta"><StatusPill status={event.status} /><span className="mono">EVENT / {String(event.id || '').slice(0, 8)}</span></div><h3>{event.title || 'Untitled campus event'}</h3><div className="event-facts"><span><i>◷</i> Schedule to be announced</span><span><i>⌖</i> Northstar campus</span></div><div className="organizer-line"><span className="organizer-avatar">{initials}</span><span><small>HOSTED BY</small><b className="mono">{String(event.organizer_id || 'Campus team').slice(0, 14)}</b></span><span className="card-capacity">{event.capacity ? `${event.capacity} max` : 'Open'}</span></div><div className="card-actions"><button className="button primary" onClick={onSelect} disabled={!open}> {open ? 'Save my seat' : 'Registration closed'} <span>↗</span></button><button className="button icon-only" title="View attendees" onClick={onRoster}>◎</button></div></div></article>;
+  const open = isRegistrationOpen(event.status);
+  return <article className={`event-card card-${index % 4}`}><div className="event-cover"><img className="cover-photo" src={COVER_IMAGES[index % COVER_IMAGES.length]} alt="" loading="lazy" /><span className="cover-no">CP / {String(index + 1).padStart(2, '0')}</span><span className="cover-glyph">{['✳', '◈', '⌁', '✣'][index % 4]}</span><span className="cover-orbit" /><span className="cover-cap">{event.capacity ? `${event.capacity} SEATS` : 'CAMPUS EVENT'}</span></div><div className="event-info"><div className="event-meta"><StatusPill status={event.status} /><span className="mono">EVENT / {String(event.id || '').slice(0, 8)}</span></div><h3>{event.title || 'Untitled campus event'}</h3><div className="event-facts"><span><i>◷</i> Schedule to be announced</span><span><i>⌖</i> Campus location not provided</span></div><div className="organizer-line"><span className="organizer-avatar">{initials}</span><span><small>HOSTED BY</small><b className="mono">{String(event.organizer_id || 'Campus team').slice(0, 14)}</b></span><span className="card-capacity">{event.capacity ? `${event.capacity} max` : 'Open'}</span></div><div className="card-actions"><button className="button primary" onClick={onSelect} disabled={!open}> {open ? 'Save my seat' : 'Registration closed'} <span>↗</span></button><button className="button icon-only" title="View attendees" onClick={onRoster}>◎</button></div></div></article>;
 }
 
 function Metric({ label, value, note, glyph, tone = '' }) {
@@ -242,7 +257,7 @@ function RegistrationsPage({ userId, profileDraft, setProfileDraft, onSave, mess
     <PageHeading eyebrow="YOUR PLACE IN THE ROOM" title="Plans worth" accent="keeping." description="Your campus calendar, with a little more possibility in it." actions={<button className="button secondary" onClick={onRefresh}>↻ <span>Sync tickets</span></button>} />
     <section className="profile-panel"><div className="profile-panel-mark">▣</div><div className="profile-panel-copy"><div className="eyebrow">LOCAL PROFILE · NO SIGN-IN</div><h2>{userId ? 'Your registrations are one tap away.' : 'Connect a profile UUID to see your tickets.'}</h2><p>The backend registration API looks up a user by UUID. This value stays in this browser only; there’s no account or login flow.</p></div><form className="profile-form" onSubmit={onSave}><label htmlFor="profile-id">USER UUID</label><div className="profile-input-row"><input id="profile-id" value={profileDraft} onChange={(event) => setProfileDraft(event.target.value)} placeholder="Paste a users.id UUID" /><button className="button primary" type="submit">{userId ? 'Update' : 'Save'} <span>↗</span></button></div>{message && <small className="inline-message">{message}</small>}</form></section>
     <div className="section-heading"><div><div className="eyebrow">YOUR LINEUP</div><h2>Registrations <span className="title-period">.</span></h2></div><span className="mono section-count">{String(items.length).padStart(2, '0')} TICKETS</span></div>
-    {!userId ? <div className="empty-state"><span>▣</span><b>Nothing on your calendar yet</b><small>Save the UUID for a row in the backend’s <code>users</code> table above to load its registrations.</small><button className="button secondary" onClick={onBrowse}>Browse events <span>↗</span></button></div> : loading ? <LoadingState label="Finding your registrations" /> : error ? <ErrorState message={error} onRetry={onRefresh} /> : items.length === 0 ? <div className="empty-state"><span>▣</span><b>Your calendar is wide open</b><small>When you register for an event, your ticket will appear here.</small><button className="button primary" onClick={onBrowse}>Find an event <span>↗</span></button></div> : <div className="ticket-list">{items.map((item, index) => <article className="ticket" key={item.id || `${item.event_id}-${index}`}><div className={`ticket-symbol ticket-${index % 3}`}>✳</div><div className="ticket-body"><div className="eyebrow">CAMPUSPULSE · ENTRY {String(index + 1).padStart(3, '0')}</div><h3>{item.events?.title || 'Campus event'}</h3><p>{item.events?.status || 'Registration confirmed'} <span>·</span> {item.events?.capacity ? `${item.events.capacity} seats` : 'Campus network'}</p></div><div className="ticket-code"><span className="mono">REG / {String(item.id || item.event_id).slice(0, 8)}</span><div className="barcode">▥ ▥ ▥ ▥ ▥ ▥</div></div><StatusPill status="registered" /></article>)}</div>}
+    {!userId ? <div className="empty-state"><span>▣</span><b>Nothing on your calendar yet</b><small>Save the UUID for a row in the backend’s <code>users</code> table above to load its registrations.</small><button className="button secondary" onClick={onBrowse}>Browse events <span>↗</span></button></div> : loading ? <LoadingState label="Finding your registrations" /> : error ? <ErrorState message={error} onRetry={onRefresh} /> : items.length === 0 ? <div className="empty-state"><span>▣</span><b>Your calendar is wide open</b><small>When you register for an event, your ticket will appear here.</small><button className="button primary" onClick={onBrowse}>Find an event <span>↗</span></button></div> : <div className="ticket-list">{items.map((item, index) => <article className="ticket" key={item.id || `${item.event_id}-${index}`}><div className="ticket-art"><img src={TICKET_IMAGES[index % TICKET_IMAGES.length]} alt="" loading="lazy" /><span>ENTRY {String(index + 1).padStart(2, '0')}</span></div><div className="ticket-body"><div className="eyebrow">CAMPUSPULSE · ENTRY {String(index + 1).padStart(3, '0')}</div><h3>{item.events?.title || 'Campus event'}</h3><p>{item.events?.status || 'Registration confirmed'} <span>·</span> {item.events?.capacity ? `${item.events.capacity} seats` : 'Campus network'}</p></div><div className="ticket-code"><span className="mono">REG / {String(item.id || item.event_id).slice(0, 8)}</span><div className="barcode">▥ ▥ ▥ ▥ ▥ ▥</div></div><StatusPill status="registered" /></article>)}</div>}
   </>;
 }
 
@@ -260,7 +275,7 @@ function OrganizerPage({ events, loading, error, onRoster, onBrowse }) {
 function ReportsPage({ events, loading, error, openEvents, onRefresh }) {
   const closed = Math.max(events.length - openEvents, 0);
   const seats = events.reduce((sum, event) => sum + (Number(event.capacity) || 0), 0);
-  const openCapacity = events.filter((event) => String(event.status).toLowerCase() === 'open').reduce((sum, event) => sum + (Number(event.capacity) || 0), 0);
+  const openCapacity = events.filter((event) => isRegistrationOpen(event.status)).reduce((sum, event) => sum + (Number(event.capacity) || 0), 0);
   return <>
     <PageHeading eyebrow="CAMPUS SIGNAL / ANALYTICS" title="See what’s" accent="taking shape." description="A live read on the events your campus is putting into motion." actions={<button className="button secondary" onClick={onRefresh}>↻ <span>Refresh metrics</span></button>} />
     {loading ? <LoadingState label="Gathering campus signals" /> : error ? <ErrorState message={error} onRetry={onRefresh} /> : <>
