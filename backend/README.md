@@ -20,3 +20,5 @@ For local development, copy `.env.example` to `.env` and fill in your Supabase p
 - `GET /api/events/<event_id>/registrations`
 
 The API currently has no authentication, and CORS allows requests from any origin.
+
+To allow the deployed publishable-key client to read events and create/read registrations without login, run `supabase_public_access.sql` in the Supabase SQL Editor. This grants public access to event records and registration rows. The attendee roster API returns user UUIDs, not user emails.

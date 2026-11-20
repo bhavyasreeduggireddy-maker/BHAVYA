@@ -136,7 +136,7 @@ def event_registrations(event_id):
         result = (
             get_supabase()
             .table("registrations")
-            .select("*, users(id, email, role)")
+            .select("id, user_id, event_id, created_at")
             .eq("event_id", str(event_id))
             .execute()
         )
